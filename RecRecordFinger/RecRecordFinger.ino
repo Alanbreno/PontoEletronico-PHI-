@@ -72,8 +72,8 @@ uint8_t readnumber(void) {
 }
 
 void loop()
-{
-  String RetornoComando = leComandoSerial();
+{);
+  String comandoUSB = leComandoSerialUSB();
   if (RetornoComando != "" && RetornoComando == "MagicPacketEnviado") {
     tela.clrScr();
     delay(300);
@@ -83,8 +83,9 @@ void loop()
     tela.print(hora, CENTER, 20);
     tela.print(ID, CENTER, 40);
     Serial.println(RetornoComando);
+  String RetornoComando = leComandoSerial(
   }
-  if (Serial.available()) {
+  if (comandoUSB == "addDigital") {
     Serial.readString();
     Serial.println("Ready to enroll a fingerprint!");
     Serial.println("Please type in the ID # (from 1 to 127) you want to save this finger as...");
@@ -129,49 +130,6 @@ uint8_t getFingerprintEnroll() {
     }
   }
 
-  // OK success!
-
-  p = finger.image2Tz(1);
-  switch (p) {
-    case FINGERPRINT_OK:
-      Serial.println("Image converted");
-      break;
-    case FINGERPRINT_IMAGEMESS:
-      Serial.println("Image too messy");
-      return p;
-    case FINGERPRINT_PACKETRECIEVEERR:
-      Serial.println("Communication error");
-      return p;
-    case FINGERPRINT_FEATUREFAIL:
-      Serial.println("Could not find fingerprint features");
-      return p;
-    case FINGERPRINT_INVALIDIMAGE:
-      Serial.println("Could not find fingerprint features");
-      return p;
-    default:
-      Serial.println("Unknown error");
-      return p;
-  }
-
-  Serial.println("Remove finger");
-  delay(2000);
-  p = 0;
-  while (p != FINGERPRINT_NOFINGER) {
-    p = finger.getImage();
-  }
-  Serial.print("ID "); Serial.println(id);
-  p = -1;
-  Serial.println("Place same finger again");
-  while (p != FINGERPRINT_OK) {
-    p = finger.getImage();
-    switch (p) {
-      case FINGERPRINT_OK:
-        Serial.println("Image taken");
-        break;
-      case FINGERPRINT_NOFINGER:
-
-        break;
-      case FINGERPRINT_PACKETRECIEVEERR:
         Serial.println("Communication error");
         break;
       case FINGERPRINT_IMAGEFAIL:
@@ -290,6 +248,35 @@ String leComandoSerial() {
   while (Serial2.available() > 0) {
     //ler o byte disponivel na serial
     caractere = Serial2.read();
+
+    //verifica se é igual ao byte de inicio de comando
+    if (caractere == startComando) {
+      delay(10);
+      salvarDados = true;
+      continue;                        //pula para proxima iteração para ler um caractere válido
+      //verifica se é igual ao byte de fim de comando
+    } else if (caractere == endComando) {
+      salvarDados = false;
+      return comando;
+    }
+
+    if (salvarDados) {
+      comando.concat(caractere);
+    }
+    delay(10);
+  }
+}
+
+String leComandoSerialUSB() {
+  String comando = "";                  //string que guarda o comando transmitido
+  char caractere;                       //char que guarda o byte lido atualmente
+  char startComando = '<';              //caractere que antecede o comando
+  char endComando = '>';                //caractere que finaliza o comando
+  boolean salvarDados = false;
+
+  while (Serial.available() > 0) {
+    //ler o byte disponivel na serial
+    caractere = Serial.read();
 
     //verifica se é igual ao byte de inicio de comando
     if (caractere == startComando) {
